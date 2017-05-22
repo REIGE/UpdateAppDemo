@@ -7,8 +7,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
+import android.support.v4.content.FileProvider;
 import android.util.Log;
 
 import java.io.File;
@@ -61,9 +63,20 @@ public class DownApkReceiver extends BroadcastReceiver {
             File file = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS + File.separator + apkName);
             if (file != null) {
                 Intent install = new Intent("android.intent.action.VIEW");
-                Uri downloadFileUri = Uri.fromFile(file);
-                install.setDataAndType(downloadFileUri, "application/vnd.android.package-archive");
+                // 由于没有在Activity环境下启动Activity,设置下面的标签
                 install.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+                if(Build.VERSION.SDK_INT> Build.VERSION_CODES.N) {
+                    //参数1 上下文, 参数2 Provider主机地址 和配置文件中保持一致   参数3  共享的文件
+                    Uri apkUri = FileProvider.getUriForFile(context, "com.example.chenfengyao.installapkdemo", file);
+                    //添加这一句表示对目标应用临时授权该Uri所代表的文件
+                    install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                }else {
+                    //安卓7.0一下的安装逻辑
+                    Uri downloadFileUri = Uri.fromFile(file);
+                    install.setDataAndType(downloadFileUri, "application/vnd.android.package-archive");
+                }
                 context.startActivity(install);
             } else {
                 Log.d("DownApkReceiver", "下载失败");
