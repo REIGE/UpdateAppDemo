@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.Handler;
 import android.util.Log;
 
 import java.io.File;
@@ -17,7 +18,6 @@ public class DownApkReceiver extends BroadcastReceiver {
     SharedPreferences mSharedP;
     DownloadManager mManager;
     Context ctx;
-
     @Override
     public void onReceive(Context context, Intent intent) {
         ctx = context;
@@ -31,7 +31,7 @@ public class DownApkReceiver extends BroadcastReceiver {
         }
     }
 
-    private void checkDownloadStatus(Context context, long downloadId) {
+    private void checkDownloadStatus(final Context context, long downloadId) {
         mManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         DownloadManager.Query query = new DownloadManager.Query();
         query.setFilterById(downloadId);
@@ -58,7 +58,7 @@ public class DownApkReceiver extends BroadcastReceiver {
         String apkName = mSharedP.getString("apkName", null);
         if (apkName != null) {
             Log.d("DownApkReceiver", "apkName 为" + apkName);
-            File file = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS + "/" + apkName);
+            File file = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS + File.separator + apkName);
             if (file != null) {
                 Intent install = new Intent("android.intent.action.VIEW");
                 Uri downloadFileUri = Uri.fromFile(file);

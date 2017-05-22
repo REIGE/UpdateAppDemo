@@ -16,23 +16,22 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initView();
         initData();
-
-
     }
 
     private void initData() {
-        UpdateAppEngine.init(this);
-        updateAppEngine = UpdateAppEngine.getInstance();
+        updateAppEngine = new UpdateAppEngine(this);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                updateAppEngine.downLoad(MainActivity.this,"qq","https://qd.myapp.com/myapp/qqteam/AndroidQQ/mobileqq_android.apk");
+                //没有在没有下载中 开始下载
+                if(!updateAppEngine.isDownLoading()) {
+                    updateAppEngine.startDownLoad("https://qd.myapp.com/myapp/qqteam/AndroidQQ/mobileqq_android.apk", "qq");
+                }
             }
         });
     }
 
     private void initView() {
         button = (Button)findViewById(R.id.button);
-
     }
 }

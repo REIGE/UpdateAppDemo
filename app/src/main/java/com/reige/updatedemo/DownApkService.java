@@ -22,10 +22,9 @@ public class DownApkService extends Service {
     Context context = this;
     SharedPreferences mSp;
     private DownloadManager mDownloadManager;
-
-
     private DownloadBinder mBinder = new DownloadBinder();
-    private LongSparseArray<String> mApkPaths;
+
+    private LongSparseArray<String> mApkPaths = new LongSparseArray<>();
     private boolean mIsRoot = false;
     private DownApkReceiver mReceiver;
 
@@ -35,60 +34,38 @@ public class DownApkService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        return mBinder;
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Bundle downloadBundle = intent.getBundleExtra("download");
-        if (downloadBundle != null) {
-            String downloadUrl = downloadBundle.getString("downloadUrl");
-            String title = downloadBundle.getString("title");
-            if (!TextUtils.isEmpty(downloadUrl)) {
-                mSp = context.getSharedPreferences("downloadApk", MODE_PRIVATE);
-                long downloadId = downloadApk(downloadUrl, title);
-                mSp.edit().putLong("downloadId", downloadId).commit();
-            }
-        }
-        stopSelf();
+        mSp = context.getSharedPreferences("downloadApk", MODE_PRIVATE);
         return super.onStartCommand(intent, flags, startId);
-    }
-
-
-    private long downloadApk(String url, String title) {
-        Uri downloadUri = Uri.parse(url);
-        DownloadManager.Request request = new DownloadManager.Request(downloadUri);
-        String apkName = title + ".apk";
-        File file = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS + "/" + apkName);
-        if (file != null && file.exists()) {
-//            file.delete();
-            file.deleteOnExit();
-        }
-        request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS,
-                apkName);
-        mSp.edit().putString("apkName", apkName).commit();
-        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-        request.setVisibleInDownloadsUi(true);
-        request.setTitle(title);
-        mDownloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-        return mDownloadManager.enqueue(request);
     }
 
     public class DownloadBinder extends Binder {
 
-        public long startDownload(String apkUrl) {
-            //点击下载
-            //删除原有的APK
-//            IOUtils.clearApk(DownApkService.this, "test.apk");
-            //使用DownLoadManager来下载
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
+        public long startDownload(String apkUrl,String apkName) {
             //将文件下载到自己的Download文件夹下,必须是External的
             //这是DownloadManager的限制
-            File file = new File(getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "test.apk");
+            File file = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS+File.separator+apkName+".apk");
+            if (file.exists()) file.delete();
+            //使用DownLoadManager来下载
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(apkUrl));
+            request.setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, apkName);
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setVisibleInDownloadsUi(true);
+            request.setTitle(apkName);
+            mDownloadManager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+
             request.setDestinationUri(Uri.fromFile(file));
 
             //添加请求 开始下载
             long downloadId = mDownloadManager.enqueue(request);
+
+            mSp.edit().putString("apkName", apkName+".apk").apply();
+            mSp.edit().putLong("downloadId", downloadId).apply();
+
             Log.d("DownloadBinder", file.getAbsolutePath());
             mApkPaths.put(downloadId, file.getAbsolutePath());
             return downloadId;
