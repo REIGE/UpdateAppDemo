@@ -6,16 +6,13 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Toast;
 
-
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
-
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -35,27 +32,24 @@ public class UpdateAppEngine {
     private final Intent downloadApkIntent;
     private boolean isDownLoading = false;
     private OnProgressChangedListener onProgressChangedListener;
+    private String apkUrl;
+    private String apkName;
+    private DownApkService.DownloadBinder mDownloadBinder;
 
     public UpdateAppEngine(Context context) {
         mContext = context.getApplicationContext();  //防止内存泄露
         downloadApkIntent = new Intent(mContext, DownApkService.class);
-        mContext.startService(downloadApkIntent);
-        mContext.bindService(downloadApkIntent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     public void startDownLoad(String apkUrl, String apkName) {
-        if (canDownloadState(mContext)) {
-            isDownLoading = true;
-            long downLoadId = mDownloadBinder.startDownload(apkUrl, apkName);
-            startCheckProgress(downLoadId);
+        this.apkUrl = apkUrl;
+        this.apkName = apkName;
+        if(!isDownLoading()) {
+            mContext.startService(downloadApkIntent);
+            mContext.bindService(downloadApkIntent, mConnection, Context.BIND_AUTO_CREATE);
+            Toast.makeText(mContext, "后台下载中，请稍候...", Toast.LENGTH_SHORT).show();
         }else {
-            //调用浏览器进行更新
-            Log.d("UpdateVersion", "DownloadManager 不可用");
-            Intent intent = new Intent();
-            intent.setAction("android.intent.action.VIEW");
-            Uri content_url = Uri.parse(apkUrl);
-            intent.setData(content_url);
-            mContext.startActivity(intent);
+            Toast.makeText(mContext, "后台下载中，请稍候...", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -63,11 +57,24 @@ public class UpdateAppEngine {
         return isDownLoading;
     }
 
-    private DownApkService.DownloadBinder mDownloadBinder;
+
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             mDownloadBinder = (DownApkService.DownloadBinder) service;
+            if (canDownloadState(mContext)) {
+                isDownLoading = true;
+                long downLoadId = mDownloadBinder.startDownload(apkUrl, apkName);
+                startCheckProgress(downLoadId);
+            }else {
+                //调用浏览器进行更新
+                Log.d("UpdateVersion", "DownloadManager 不可用");
+                Intent intent = new Intent();
+                intent.setAction("android.intent.action.VIEW");
+                Uri content_url = Uri.parse(apkUrl);
+                intent.setData(content_url);
+                mContext.startActivity(intent);
+            }
         }
 
         @Override
@@ -155,8 +162,10 @@ public class UpdateAppEngine {
     }
 
     private void release() {
-        mContext.unbindService(mConnection);//先解绑服务
-        mContext.stopService(downloadApkIntent);//再停止服务
+        if(mConnection!= null) {
+            mContext.unbindService(mConnection);//先解绑服务
+            mContext.stopService(downloadApkIntent);//再停止服务
+        }
     }
 
     public void setOnProgressChangedListener(OnProgressChangedListener onProgressChangedListener) {

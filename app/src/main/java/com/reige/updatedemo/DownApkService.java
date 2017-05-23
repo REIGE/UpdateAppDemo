@@ -8,11 +8,9 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Binder;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.v4.util.LongSparseArray;
-import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.File;
